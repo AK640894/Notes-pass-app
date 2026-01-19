@@ -130,6 +130,7 @@ export function NoteList({ sessionKey, theme, toggleTheme }) {
                 <div className="main-panel">
                     {selectedNote ? (
                         <NoteDetail
+                            key={selectedNote.id}
                             note={selectedNote}
                             onEdit={() => { setEditingNote(selectedNote); setIsModalOpen(true); }}
                             onDelete={() => handleDelete(selectedNote.id)}
