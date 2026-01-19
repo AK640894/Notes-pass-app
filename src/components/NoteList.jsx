@@ -4,6 +4,7 @@ import { Settings } from './Settings';
 
 export function NoteList({ sessionKey, theme, toggleTheme }) {
     const [notes, setNotes] = useState([]);
+    const [selectedNoteId, setSelectedNoteId] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [editingNote, setEditingNote] = useState(null);
@@ -56,6 +57,8 @@ export function NoteList({ sessionKey, theme, toggleTheme }) {
                     timestamp: Date.now()
                 };
                 updatedNotes = [newNote, ...notes];
+                // Auto-select new note
+                setSelectedNoteId(newNote.id);
             }
 
             setNotes(updatedNotes);
@@ -76,39 +79,71 @@ export function NoteList({ sessionKey, theme, toggleTheme }) {
             const updatedNotes = notes.filter(n => n.id !== noteId);
             setNotes(updatedNotes);
             await storage.saveNotes(updatedNotes, sessionKey);
+            if (selectedNoteId === noteId) {
+                setSelectedNoteId(null);
+            }
         } catch (error) {
             console.error("Error deleting note", error);
             alert("Error deleting note");
         }
     };
 
+    const selectedNote = notes.find(n => n.id === selectedNoteId);
+
     return (
         <>
             <div className="flex-between" style={{ marginBottom: '1rem' }}>
-                <button className="primary" onClick={() => { setEditingNote(null); setIsModalOpen(true); }}>
-                    + Add New Note
-                </button>
-                <button onClick={() => setIsSettingsOpen(true)}>
-                    ⚙️ Settings
-                </button>
+                <h2 style={{ margin: 0 }}>My Notes</h2>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button className="primary" onClick={() => { setEditingNote(null); setIsModalOpen(true); }}>
+                        + Add New
+                    </button>
+                    <button onClick={() => setIsSettingsOpen(true)}>
+                        ⚙️ Settings
+                    </button>
+                </div>
             </div>
 
-            {notes.length === 0 ? (
-                <div style={{ textAlign: 'center', color: 'var(--text-dim)', padding: '2rem' }}>
-                    No notes yet. Tap 'Add New Note' to start.
-                </div>
-            ) : (
-                <div style={{ display: 'grid', gap: '1rem' }}>
+            <div className="split-view-container">
+                {/* Sidebar */}
+                <div className="sidebar">
+                    {notes.length === 0 && (
+                        <div style={{ padding: '1rem', color: 'var(--text-dim)', textAlign: 'center' }}>
+                            No notes yet
+                        </div>
+                    )}
                     {notes.map(note => (
-                        <NoteCard
+                        <div
                             key={note.id}
-                            note={note}
-                            onEdit={() => { setEditingNote(note); setIsModalOpen(true); }}
-                            onDelete={() => handleDelete(note.id)}
-                        />
+                            className={`sidebar-item ${selectedNoteId === note.id ? 'selected' : ''}`}
+                            onClick={() => setSelectedNoteId(note.id)}
+                        >
+                            <div style={{ fontWeight: 'bold' }}>{note.account}</div>
+                            <div style={{ fontSize: '0.8em', opacity: 0.7 }}>
+                                {new Date(note.timestamp).toLocaleDateString()}
+                            </div>
+                        </div>
                     ))}
                 </div>
-            )}
+
+                {/* Main Panel */}
+                <div className="main-panel">
+                    {selectedNote ? (
+                        <NoteDetail
+                            note={selectedNote}
+                            onEdit={() => { setEditingNote(selectedNote); setIsModalOpen(true); }}
+                            onDelete={() => handleDelete(selectedNote.id)}
+                        />
+                    ) : (
+                        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)' }}>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📝</div>
+                                <div>Select a note from the left to view details</div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
 
             {isModalOpen && (
                 <NoteModal
@@ -136,33 +171,41 @@ export function NoteList({ sessionKey, theme, toggleTheme }) {
     );
 }
 
-function NoteCard({ note, onEdit, onDelete }) {
+function NoteDetail({ note, onEdit, onDelete }) {
     const [showSecret, setShowSecret] = useState(false);
 
     return (
-        <div className="card">
-            <div className="flex-between">
-                <h3 style={{ margin: '0 0 0.5rem 0' }}>{note.account}</h3>
+        <div>
+            <div className="flex-between" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginBottom: '2rem' }}>
+                <h1 style={{ margin: 0 }}>{note.account}</h1>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button style={{ padding: '0.4rem' }} onClick={onEdit}>✏️</button>
-                    <button className="danger" style={{ padding: '0.4rem' }} onClick={onDelete}>🗑️</button>
+                    <button onClick={onEdit}>Edit</button>
+                    <button className="danger" onClick={onDelete}>Delete</button>
                 </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
-                <div style={{
-                    flex: 1,
-                    background: 'var(--bg)',
-                    padding: '0.5rem',
-                    borderRadius: '0.25rem',
-                    fontFamily: 'monospace',
-                    minHeight: '1.5em'
-                }}>
-                    {showSecret ? note.secret : '••••••••••••'}
+            <div style={{ marginBottom: '2rem' }}>
+                <label style={{ display: 'block', color: 'var(--text-dim)', marginBottom: '0.5rem' }}>Secret / Password</label>
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div style={{
+                        flex: 1,
+                        background: 'var(--bg)',
+                        padding: '1rem',
+                        borderRadius: '0.5rem',
+                        fontFamily: 'monospace',
+                        fontSize: '1.2rem',
+                        border: '1px solid var(--border)'
+                    }}>
+                        {showSecret ? note.secret : '••••••••••••••••'}
+                    </div>
+                    <button onClick={() => setShowSecret(!showSecret)}>
+                        {showSecret ? 'Hide' : 'Show'}
+                    </button>
                 </div>
-                <button onClick={() => setShowSecret(!showSecret)}>
-                    {showSecret ? 'Hide' : 'Show'}
-                </button>
+            </div>
+
+            <div style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>
+                Last updated: {new Date(note.timestamp).toLocaleString()}
             </div>
         </div>
     );
