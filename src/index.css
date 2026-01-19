@@ -9,14 +9,24 @@
   --font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
+/* Dark theme variables - applied via .dark class or system preference if no class override */
+body.dark, :root:has(body.dark) {
+  --primary: #818cf8;
+  --bg: #111827;
+  --surface: #1f2937;
+  --text: #f9fafb;
+  --text-dim: #9ca3af;
+  --border: #374151;
+}
+
+/* Fallback for system preference if no manual override is set (optional, but good for first load) */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --primary: #818cf8;
-    --bg: #111827;
-    --surface: #1f2937;
-    --text: #f9fafb;
-    --text-dim: #9ca3af;
-    --border: #374151;
+  :root:not(:has(body.light)) {
+    /* We can leave this empty if we enforce a class on body load, 
+       but typically we want to support system pref default. 
+       Actually, standard way is to just let the class control it.
+       If we want system default, we initialize state with it.
+    */
   }
 }
 

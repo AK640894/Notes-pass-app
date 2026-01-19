@@ -105,5 +105,34 @@ export const storage = {
         }));
 
         return notes.filter(n => n !== null);
+    },
+
+    /**
+     * Updates the PIN and re-encrypts all data with the new key.
+     * @param {string} oldPin 
+     * @param {string} newPin 
+     * @returns {Promise<{success: boolean, newKey: CryptoKey, error?: string}>}
+     */
+    async updatePin(oldPin, newPin) {
+        // 1. Validate Old PIN
+        const { isValid, salt } = await this.validatePin(oldPin);
+        if (!isValid) return { success: false, error: 'Incorrect old PIN' };
+
+        // 2. Derive Old Key and Load Data
+        const oldKey = await cryptoHelpers.deriveKey(oldPin, salt);
+        const currentNotes = await this.loadNotes(oldKey);
+
+        // 3. Setup New PIN (New Salt, New Hash)
+        await this.setupPin(newPin);
+
+        // 4. Derive New Key
+        const { salt: newSalt } = await this.validatePin(newPin);
+        // Note: validatePin just reads the salt we just wrote
+        const newKey = await cryptoHelpers.deriveKey(newPin, newSalt);
+
+        // 5. Re-encrypt Data with New Key
+        await this.saveNotes(currentNotes, newKey);
+
+        return { success: true, newKey };
     }
 };

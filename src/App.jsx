@@ -8,13 +8,23 @@ function App() {
   const [sessionKey, setSessionKey] = useState(null);
   const [isSetup, setIsSetup] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [theme, setTheme] = useState(localStorage.getItem('pna_theme') || 'light');
 
   useEffect(() => {
+    // Apply theme
+    document.body.className = theme;
+    localStorage.setItem('pna_theme', theme);
+
     // Check if PIN is already set up on mount
     const hasPin = storage.isSetup();
     setIsSetup(hasPin);
     setLoading(false);
   }, []);
+
+  useEffect(() => {
+    document.body.className = theme;
+    localStorage.setItem('pna_theme', theme);
+  }, [theme]);
 
   const handleUnlock = (key) => {
     setSessionKey(key);
@@ -32,11 +42,23 @@ function App() {
   if (loading) return null;
 
   if (!isSetup) {
-    return <PinSetup onSetupComplete={handleSetupComplete} />;
+    return (
+      <PinSetup
+        onSetupComplete={handleSetupComplete}
+        theme={theme}
+        toggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
+      />
+    );
   }
 
   if (!sessionKey) {
-    return <LockScreen onUnlock={handleUnlock} />;
+    return (
+      <LockScreen
+        onUnlock={handleUnlock}
+        theme={theme}
+        toggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
+      />
+    );
   }
 
   return (
@@ -46,7 +68,11 @@ function App() {
         <button className="danger" onClick={handleLock}>Lock</button>
       </div>
 
-      <NoteList sessionKey={sessionKey} />
+      <NoteList
+        sessionKey={sessionKey}
+        theme={theme}
+        toggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
+      />
     </div>
   );
 }
